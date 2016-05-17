@@ -10,6 +10,7 @@
         var FileLoader = L.Class.extend({
             includes: L.Mixin.Events,
             options: {
+            	layer: L.geoJson,
                 layerOptions: {},
                 fileSizeLimit: 1024
             },
@@ -51,8 +52,7 @@
                         this.fire('data:loading', {filename: file.name, format: ext});
                         var layer = parser.call(this, e.target.result, ext);
                         this.fire('data:loaded', {layer: layer, filename: file.name, format: ext});
-                    }
-                    catch (err) {
+                    } catch (err) {
                         this.fire('data:error', {error: err});
                     }
         
@@ -65,7 +65,7 @@
                 if (typeof content == 'string') {
                     content = JSON.parse(content);
                 }
-                var layer = L.geoJson(content, this.options.layerOptions);
+                var layer = this.options.layer(content, this.options.layerOptions);
         
                 if (layer.getLayers().length === 0) {
                     throw new Error('GeoJSON has no valid layers.');
@@ -94,6 +94,7 @@
                 LABEL: '&#8965;'
             },
             options: {
+            	container: undefined,
                 position: 'topleft',
                 fitBounds: true,
                 layerOptions: {},
@@ -132,6 +133,8 @@
                 var callbacks = {
                     dragenter: function () {
                         map.scrollWheelZoom.disable();
+                        e.stopPropagation();
+                        e.preventDefault();
                     },
                     dragleave: function () {
                         map.scrollWheelZoom.enable();
@@ -158,6 +161,21 @@
                 for (var name in callbacks)
                     dropbox.addEventListener(name, callbacks[name], false);
             },
+            
+            addTo: function(map) {
+		if (this.options.container) {
+			this.remove();
+			this._map = map;
+
+			var container = this._container = this.onAdd(map),
+				parent = L.DomUtil.get(this.options.container);
+
+			parent.appendChild(container);
+		} else {
+			L.class.prototype.addTo.call(this, map);
+		}
+		return this;
+	   },
         
             _initContainer: function () {
                 // Create a button, and bind click on hidden file input
