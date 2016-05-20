@@ -35,7 +35,12 @@ var FileLoader = L.Class.extend({
 
         // Check file extension
         var ext = file.name.split('.').pop(),
+            parser;
+        if (this.options.parser) {
+            parser = this.options.parser;
+        } else {
             parser = this._parsers[ext];
+        }
         if (!parser) {
             this.fire('data:error', {
                 error: new Error('Unsupported file type ' + file.type + '(' + ext + ')')
@@ -47,7 +52,7 @@ var FileLoader = L.Class.extend({
         reader.onload = L.Util.bind(function (e) {
             try {
                 this.fire('data:loading', {filename: file.name, format: ext});
-                var layer = parser.call(this, e.target.result, ext);
+                var layer = this._loadGeoJSON( parser.call(this, e.target.result, ext) );
                 this.fire('data:loaded', {layer: layer, filename: file.name, format: ext});
             }
             catch (err) {
@@ -80,8 +85,7 @@ var FileLoader = L.Class.extend({
         if (typeof content == 'string') {
             content = ( new window.DOMParser() ).parseFromString(content, "text/xml");
         }
-        var geojson = toGeoJSON[format](content);
-        return this._loadGeoJSON(geojson);
+        return toGeoJSON[format](content);
     }
 });
 
@@ -96,7 +100,9 @@ L.Control.FileLayerLoad = L.Control.extend({
         fitBounds: true,
         layerOptions: {},
         addToMap: true,
-        fileSizeLimit: 1024
+        fileSizeLimit: 1024,
+        loader: L.Util.fileLoader,
+        parser: undefined // uses default parser
     },
 
     initialize: function (options) {
@@ -105,7 +111,7 @@ L.Control.FileLayerLoad = L.Control.extend({
     },
 
     onAdd: function (map) {
-        this.loader = new FileLoader(map, this.options);
+        this.loader = this.options.loader(map, this.options);
 
         this.loader.on('data:loaded', function (e) {
             // Fit bounds after loading
