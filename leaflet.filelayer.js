@@ -18,7 +18,7 @@ L.Util.FileLoader = L.Class.extend({
         L.Util.setOptions(this, options);
 
         this._parsers = {
-            'geojson': this._loadGeoJSON,
+            'geojson': function(e){return e;},
             'gpx': this._convertToGeoJSON,
             'kml': this._convertToGeoJSON
         };
@@ -48,7 +48,7 @@ L.Util.FileLoader = L.Class.extend({
         reader.onload = L.Util.bind(function (e) {
             try {
                 this.fire('data:loading', {filename: file.name, format: ext});
-                var layer = parser.call(this, e.target.result, ext);
+                var layer =  this._loadGeoJSON( parser.call(this, e.target.result, ext) );
                 this.fire('data:loaded', {layer: layer, filename: file.name, format: ext});
             }
             catch (err) {
@@ -81,8 +81,7 @@ L.Util.FileLoader = L.Class.extend({
         if (typeof content == 'string') {
             content = ( new window.DOMParser() ).parseFromString(content, "text/xml");
         }
-        var geojson = toGeoJSON[format](content);
-        return this._loadGeoJSON(geojson);
+        return toGeoJSON[format](content);
     }
 });
 
